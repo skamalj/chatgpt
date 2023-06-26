@@ -9,7 +9,7 @@ REDSHIFT_DATABASE
 ```
 Your aws profile must be set and should have sufficient permissions to query/connect to Redshift
 
-
+This uses sample database as described over [here](https://docs.aws.amazon.com/redshift/latest/dg/c_sampledb.html)
 ##  Some queries to execute
 * list categories
 * list top 3 cities by number of users attending pop events
