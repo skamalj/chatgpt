@@ -1,6 +1,9 @@
 const express = require('express');
 const { Configuration, OpenAIApi } = require("openai");
 const { RedshiftDataClient, ExecuteStatementCommand, DescribeStatementCommand, GetStatementResultCommand } = require("@aws-sdk/client-redshift-data");
+const { BigQuery } = require('@google-cloud/bigquery');
+const fs = require('fs');
+const { inspect } = require('util');
 
 const app = express();
 const port = 3000;
@@ -55,7 +58,15 @@ async function executeSqlAndWait(sql) {
 }
 
 
-// Function to retrieve Redshift schema details (tables and columns)
+function readDatabaseSchemaFromFile(filePath) {
+  try {
+    const schema = fs.readFileSync(filePath, 'utf8').trim();
+    return schema.replace(/\n/g, ' ');
+  } catch (error) {
+    throw error;
+  }
+}
+
 // Function to retrieve Redshift schema details (tables and columns)
 async function getRedshiftSchema() {
     if (schema) {
@@ -110,29 +121,42 @@ app.use((req, res, next) => {
 // Define a route to handle the OpenAI GPT-3.5 Turbo API call
 app.post('/generate-response', async (req, res) => {
   try {
-    const { query } = req.body;
+    const { query, temp, model} = req.body;
+    let response = null;
 
     if (!schema) {
-      schema = await getRedshiftSchema();
+      schema = readDatabaseSchemaFromFile("tickit.sql");
     }
+    console.log(typeof temp, temp, typeof model, model)
 
-    const response = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo",
-      temperature: 0.6,
-      n: 1,
-      messages: [
-        { role: "user", content: JSON.stringify(schema)},
-        { role: "assistant", content: "above provides database schema information for subsequent queries as schema.table.columname:data_type" },
-        {role: "user", content: "only provide sql, must not include any other text or notes , SQL should be AWS redshift compliant, must alias all tables, check for ambigious columns"},
-        { role: "user", content: query }
-      ],
-    });
-
-    const generatedResponse = response.data.choices[0].message.content;
+    const information = "only provide sql, must not include any other text or notes, must alias all tables,  check for ambigious columns, always qualify tablenames with schema"
+    
+    const prompt = `given the database schema ${schema} and additional information ${information} answer the following question. Question: ${query}`
+    if (model == 'gpt-3.5-turbo') {
+        response = (await openai.createChatCompletion({
+          model: 'gpt-3.5-turbo',
+          temperature: temp,
+          n: 1,
+          messages: [
+            { role: "assistant", content: schema},
+            {role: "user", content: information},
+            { role: "user", content: query }
+          ],
+        })).data.choices[0].message.content;
+    } else {
+        response = (await openai.createCompletion({
+        model: 'text-davinci-003',
+        prompt: prompt,
+        temperature: temp,
+        max_tokens: 300
+      })).data.choices[0].text;
+    }
+    
+    const generatedResponse = response;
     console.log({ sql: generatedResponse })
     res.json({ sql: generatedResponse });
   } catch (error) {
-    console.error("Error: " + error);
+    console.log(inspect(error, { showHidden: true }));
     res.status(500).json({ error: "Error while generating SQL"});
   }
 });
@@ -157,6 +181,22 @@ app.post('/redshift-query', async (req, res) => {
   }
 });
 
+const bigquery = new BigQuery();
+app.post('/bigquery-query', async (req, res) => {
+  try {
+    const { sql } = req.body;
+    const options = {
+      query: sql,
+      location: 'asia-south1',
+    };
+    const [rows] = await bigquery.query(options);
+    console.log(JSON.stringify(rows))
+    res.json({ records: rows });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'An error occurred' });
+  }
+});
 
 // Start the Express server
 app.listen(port, () => {

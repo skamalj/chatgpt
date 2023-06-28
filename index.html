@@ -26,6 +26,23 @@
       <div class="form-group">
         <input id="nlp-query" type="text" class="form-control" v-model="nlpQuery" placeholder="Enter NLP Query" @keydown.enter="sendQuery">
       </div>
+
+      <div class="form-group row">
+        <label for="temperature" class="col-form-label col-md-2 mb-0" style="color: blue; font-family: Helvetica;">Set Temperature</label>
+        <div class="col-md-3">
+          <input id="temperature" type="number" class="form-control" v-model="temperature" placeholder="Enter Temperature" min="0" max="1" step="0.1">
+        </div>
+        <label for="model" class="col-form-label col-md-2 mb-0" style="color: blue; font-family: Helvetica;">Select Model</label>
+        <div class="col-md-3">
+          <label class="radio-inline">
+            <input type="radio" v-model="selectedModel" value="text-davinci-003">text-davinci-003
+          </label>
+          <label class="radio-inline">
+            <input type="radio" v-model="selectedModel" value="gpt-3.5-turbo">gpt-3.5-turbo
+          </label>
+        </div>
+      </div>
+      
       <!--
       <div class="form-group">
         <b-button @click="sendQuery" variant="primary">Send Query</b-button>
@@ -37,7 +54,7 @@
       <b-row>
       <b-col cols="4">
       <div v-if="sqlQuery" class="form-group">
-        <textarea id="sql-query" class="form-control" v-model="sqlQuery" rows="11" cols="50" readonly></textarea>
+        <b-form-textarea id="sql-query" class="form-control" v-model="sqlQuery" rows="11" cols="50"></b-form-textarea>
       </div>
       <div v-if="sqlQuery" class="form-group">
         <b-button @click="sendSQLQuery" variant="secondary" class="mt-2">Execute SQL</b-button>
@@ -73,7 +90,9 @@
         return {
           nlpQuery: '',
           sqlQuery: '',
-          queryResult: null
+          queryResult: null,
+          temperature: 0.3,
+          selectedModel: 'text-davinci-003'
         };
       },
       methods: {
@@ -84,7 +103,7 @@
               headers: {
                 'Content-Type': 'application/json'
               },
-              body: JSON.stringify({ query: this.nlpQuery })
+              body: JSON.stringify({ query: this.nlpQuery, temp: Number(this.temperature), model: this.selectedModel })
             })
             .then(response => response.json())
             .then(data => this.sqlQuery = data.sql);
@@ -95,7 +114,7 @@
         },
         async sendSQLQuery() {
           try {
-            fetch('http://localhost:3000/redshift-query', {
+            fetch('http://localhost:3000/bigquery-query', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'
