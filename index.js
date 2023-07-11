@@ -138,8 +138,12 @@ app.post('/generate-response', async (req, res) => {
         temperature: temp,
         n: 1,
         messages: [
-          { role: "assistant", content: schema },
-          { role: "user", content: information },
+           { role: "assistant", content: `given the database schema ${schema} answer the user questions`  },
+          //{ role: "assistant", content: information },
+          {role: "user", content: "sample venue cities"},
+          {role: "assistant", content: "select v.venucity from redshift.venue v limit 3"},
+          {role: "user", content: "sample users living in state GA"},
+          {role: "assistant", content: "select u.username from redshift.users u where u.city = 'GA' limit 3"},
           { role: "user", content: query }
         ],
       })).data.choices[0].message.content;

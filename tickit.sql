@@ -59,7 +59,7 @@ CREATE TABLE redshift.listing (
   sellerid INT64 NOT NULL,
   eventid INT64 NOT NULL,
   dateid INT64 NOT NULL,
-  numtickets INT64 NOT NULL,
+  numtickets INT64 NOT NULL OPTIONS(description="The number of tickets available for sale, such as 2 or 20."),
   priceperticket NUMERIC(8,2),
   totalprice NUMERIC(8,2),
   listtime TIMESTAMP
@@ -72,7 +72,7 @@ CREATE TABLE redshift.sales (
   buyerid INT64 NOT NULL,
   eventid INT64 NOT NULL,
   dateid INT64 NOT NULL,
-  qtysold INT64 NOT NULL,
+  qtysold INT64 NOT NULL OPTIONS(description="The number of tickets that were sold, from 1 to 8"),
   pricepaid NUMERIC(8,2),
   commission FLOAT64,
   saletime TIMESTAMP
