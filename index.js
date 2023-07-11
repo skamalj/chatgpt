@@ -45,7 +45,7 @@ async function executeSqlAndWait(sql) {
     if (statusResponse.Error)
       throw Error(statusResponse.Error)
     else
-       resultResponse = await redshiftDataClient.send(new GetStatementResultCommand({ Id: executeId }));    
+      resultResponse = await redshiftDataClient.send(new GetStatementResultCommand({ Id: executeId }));
     return {
       ColumnMetadata: resultResponse.ColumnMetadata,
       Records: resultResponse.Records
@@ -69,47 +69,47 @@ function readDatabaseSchemaFromFile(filePath) {
 
 // Function to retrieve Redshift schema details (tables and columns)
 async function getRedshiftSchema() {
-    if (schema) {
-      // Return the cached schema if it has already been loaded
-      return schema;
-    }
-  
-    const sql = `
+  if (schema) {
+    // Return the cached schema if it has already been loaded
+    return schema;
+  }
+
+  const sql = `
       SELECT table_schema, table_name, column_name,data_type
       FROM information_schema.columns
       WHERE table_catalog = '${process.env.REDSHIFT_DATABASE}'
       and table_schema not in ( 'information_schema','pg_catalog')
       ORDER BY table_schema, table_name, ordinal_position;
     `;
-  
-    try {
-      const resultRecords = (await executeSqlAndWait(sql)).Records;
-      schema = {};
-  
-      for (const row of resultRecords) {
-        const schemaName = row[0].stringValue;
-        const tableName = row[1].stringValue;
-        const columnName = row[2].stringValue;
-        const dataType  = row[3].stringValue;
-  
-        if (!schema[schemaName]) {
-          schema[schemaName] = {};
-        }
-  
-        if (!schema[schemaName][tableName]) {
-          schema[schemaName][tableName] = [];
-        }
-  
-        schema[schemaName][tableName].push(columnName + ":" + dataType);
+
+  try {
+    const resultRecords = (await executeSqlAndWait(sql)).Records;
+    schema = {};
+
+    for (const row of resultRecords) {
+      const schemaName = row[0].stringValue;
+      const tableName = row[1].stringValue;
+      const columnName = row[2].stringValue;
+      const dataType = row[3].stringValue;
+
+      if (!schema[schemaName]) {
+        schema[schemaName] = {};
       }
-      console.log(JSON.stringify(schema))
-      return schema;
-    } catch (error) {
-      console.error("Error retrieving Redshift schema:", error);
-      throw error;
+
+      if (!schema[schemaName][tableName]) {
+        schema[schemaName][tableName] = [];
+      }
+
+      schema[schemaName][tableName].push(columnName + ":" + dataType);
     }
+    console.log(JSON.stringify(schema))
+    return schema;
+  } catch (error) {
+    console.error("Error retrieving Redshift schema:", error);
+    throw error;
   }
-  
+}
+
 // Define a middleware to set CORS headers
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', '*'); // Adjust the allowed origin if needed
@@ -121,7 +121,7 @@ app.use((req, res, next) => {
 // Define a route to handle the OpenAI GPT-3.5 Turbo API call
 app.post('/generate-response', async (req, res) => {
   try {
-    const { query, temp, model} = req.body;
+    const { query, temp, model } = req.body;
     let response = null;
 
     if (!schema) {
@@ -130,34 +130,34 @@ app.post('/generate-response', async (req, res) => {
     console.log(typeof temp, temp, typeof model, model)
 
     const information = "only provide sql, must not include any other text or notes, must alias all tables,  check for ambigious columns, always qualify tablenames with schema"
-    
+
     const prompt = `given the database schema ${schema} and additional information ${information} answer the following question. Question: ${query}`
     if (model == 'gpt-3.5-turbo') {
-        response = (await openai.createChatCompletion({
-          model: 'gpt-3.5-turbo',
-          temperature: temp,
-          n: 1,
-          messages: [
-            { role: "assistant", content: schema},
-            {role: "user", content: information},
-            { role: "user", content: query }
-          ],
-        })).data.choices[0].message.content;
+      response = (await openai.createChatCompletion({
+        model: 'gpt-3.5-turbo',
+        temperature: temp,
+        n: 1,
+        messages: [
+          { role: "assistant", content: schema },
+          { role: "user", content: information },
+          { role: "user", content: query }
+        ],
+      })).data.choices[0].message.content;
     } else {
-        response = (await openai.createCompletion({
+      response = (await openai.createCompletion({
         model: 'text-davinci-003',
         prompt: prompt,
         temperature: temp,
         max_tokens: 300
       })).data.choices[0].text;
     }
-    
+
     const generatedResponse = response;
     console.log({ sql: generatedResponse })
     res.json({ sql: generatedResponse });
   } catch (error) {
     console.log(inspect(error, { showHidden: true }));
-    res.status(500).json({ error: "Error while generating SQL"});
+    res.status(500).json({ error: "Error while generating SQL" });
   }
 });
 
@@ -200,5 +200,6 @@ app.post('/bigquery-query', async (req, res) => {
 
 // Start the Express server
 app.listen(port, () => {
-    console.log(`Server running on port ${port}`);
-  });
+  console.log(`Server running on port ${port}`);
+});
+
