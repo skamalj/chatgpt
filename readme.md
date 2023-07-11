@@ -17,7 +17,7 @@ This uses sample database as described over [here](https://docs.aws.amazon.com/r
 * * finds the top five sellers in San Diego, based on the number of tickets sold in 2008, use date table, use sales not listing, show full username
 * list top 5 categories based on number of events
 * which venue had most events hosted
-* write sql to rank venues within the city based on number of events hosted
+* write sql to rank venues within the city based on number of events hosted, select venue city, venue name and rank , sort the result on city and rank
 * who are top 5 sellers based on number of tickets sold 
 * * get seller full name as well ( qualify tablenames with schema )
 
