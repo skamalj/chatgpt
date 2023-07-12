@@ -121,31 +121,38 @@ app.use((req, res, next) => {
 // Define a route to handle the OpenAI GPT-3.5 Turbo API call
 app.post('/generate-response', async (req, res) => {
   try {
-    const { query, temp, model } = req.body;
+    const { query, temp, model, info } = req.body;
     let response = null;
 
     if (!schema) {
       schema = readDatabaseSchemaFromFile("tickit.sql");
     }
-    console.log(typeof temp, temp, typeof model, model)
 
     const information = "only provide sql, must not include any other text or notes, must alias all tables,  check for ambigious columns, always qualify tablenames with schema"
+    
+    examples = [
+      {role: "user", content: "sample venue cities"},
+      {role: "assistant", content: "select v.venucity from redshift.venue v limit 3"},
+      {role: "user", content: "sample users living in state GA"},
+      {role: "assistant", content: "select u.username from redshift.users u where u.city = 'GA' limit 3"}
+    ]
 
+    messages = [
+      { role: "assistant", content: `given the database schema ${schema} answer the user questions`  }
+    ]
+    info == 'prompt' && messages.push({ role: "assistant", content: information })
+    info == 'examples' && (messages = messages.concat(examples))
+    messages.push({ role: "user", content: query })
+    
+    //Used by Davinci
     const prompt = `given the database schema ${schema} and additional information ${information} answer the following question. Question: ${query}`
+   
     if (model == 'gpt-3.5-turbo') {
       response = (await openai.createChatCompletion({
         model: 'gpt-3.5-turbo',
         temperature: temp,
         n: 1,
-        messages: [
-           { role: "assistant", content: `given the database schema ${schema} answer the user questions`  },
-          //{ role: "assistant", content: information },
-          {role: "user", content: "sample venue cities"},
-          {role: "assistant", content: "select v.venucity from redshift.venue v limit 3"},
-          {role: "user", content: "sample users living in state GA"},
-          {role: "assistant", content: "select u.username from redshift.users u where u.city = 'GA' limit 3"},
-          { role: "user", content: query }
-        ],
+        messages: messages
       })).data.choices[0].message.content;
     } else {
       response = (await openai.createCompletion({
