@@ -4,6 +4,7 @@ const { RedshiftDataClient, ExecuteStatementCommand, DescribeStatementCommand, G
 const { BigQuery } = require('@google-cloud/bigquery');
 const fs = require('fs');
 const { inspect } = require('util');
+const { Console } = require('console');
 
 const app = express();
 const port = 3000;
@@ -128,11 +129,13 @@ app.post('/generate-response', async (req, res) => {
       schema = readDatabaseSchemaFromFile("tickit.sql");
     }
 
-    const information = "only provide sql, must not include any other text or notes, must alias all tables,  check for ambigious columns, always qualify tablenames with schema"
+    const information = "only provide sql, must not include any other text or notes, must alias all tables,qualify all column names with table aliases,  check for ambigious columns, always qualify tablenames with schema"
     
     examples = [
       {role: "user", content: "sample venue cities"},
       {role: "assistant", content: "select v.venucity from redshift.venue v limit 3"},
+      {role: "user", content: "list top 5 sellerids based on number of tickets sold"},
+      {role: "assistant", content: "SELECT s.sellerid, sum(s.qtysold) AS num_tickets_sold FROM redshift.sales s GROUP BY s.sellerid ORDER BY num_tickets_sold DESC LIMIT 5"},
       {role: "user", content: "sample users living in state GA"},
       {role: "assistant", content: "select u.username from redshift.users u where u.city = 'GA' limit 3"}
     ]
@@ -143,7 +146,7 @@ app.post('/generate-response', async (req, res) => {
     info == 'prompt' && messages.push({ role: "assistant", content: information })
     info == 'examples' && (messages = messages.concat(examples))
     messages.push({ role: "user", content: query })
-    
+    console.log(JSON.stringify(messages))
     //Used by Davinci
     const prompt = `given the database schema ${schema} and additional information ${information} answer the following question. Question: ${query}`
    

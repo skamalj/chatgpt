@@ -72,7 +72,7 @@ CREATE TABLE redshift.sales (
   buyerid INT64 NOT NULL,
   eventid INT64 NOT NULL,
   dateid INT64 NOT NULL,
-  qtysold INT64 NOT NULL OPTIONS(description="The number of tickets that were sold, from 1 to 8"),
+  qtysold INT64 NOT NULL OPTIONS(description="The number of tickets sold by seller"),
   pricepaid NUMERIC(8,2),
   commission FLOAT64,
   saletime TIMESTAMP
