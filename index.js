@@ -4,7 +4,6 @@ const { RedshiftDataClient, ExecuteStatementCommand, DescribeStatementCommand, G
 const { BigQuery } = require('@google-cloud/bigquery');
 const fs = require('fs');
 const { inspect } = require('util');
-const { Console } = require('console');
 
 const app = express();
 const port = 3000;
@@ -58,7 +57,7 @@ async function executeSqlAndWait(sql) {
   }
 }
 
-
+// Reads the database schema from a file
 function readDatabaseSchemaFromFile(filePath) {
   try {
     const schema = fs.readFileSync(filePath, 'utf8').trim();
@@ -119,14 +118,15 @@ app.use((req, res, next) => {
   next();
 });
 
-// Define a route to handle the OpenAI GPT-3.5 Turbo API call
+// Route to handle the OpenAI GPT-3.5 Turbo API call
 app.post('/generate-response', async (req, res) => {
   try {
     const { query, temp, model, info } = req.body;
     let response = null;
 
     if (!schema) {
-      schema = readDatabaseSchemaFromFile("tickit.sql");
+      schema = JSON.stringify(await getBQSchema('tickit'))
+      // schema = readDatabaseSchemaFromFile("tickit.sql");
     }
 
     const information = "only provide sql, must not include any other text or notes, must alias all tables,qualify all column names with table aliases,  check for ambigious columns, always qualify tablenames with schema"
@@ -175,7 +175,7 @@ app.post('/generate-response', async (req, res) => {
   }
 });
 
-// Define a route to execute SQL against Redshift
+// Route to execute SQL against Redshift
 app.post('/redshift-query', async (req, res) => {
   try {
     const { sql } = req.body;
@@ -196,16 +196,42 @@ app.post('/redshift-query', async (req, res) => {
 });
 
 const bigquery = new BigQuery();
-app.post('/bigquery-query', async (req, res) => {
+// Function to execute SQL against BigQuery
+async function executeBigQuery(sql) {
   try {
-    const { sql } = req.body;
     const options = {
       query: sql,
       location: 'asia-south1',
     };
     const [rows] = await bigquery.query(options);
-    console.log(JSON.stringify(rows))
-    res.json({ records: rows });
+    console.log(JSON.stringify(rows));
+    return rows;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+async function getBQSchema(dataset) {
+  try {
+    const sql = `
+      SELECT table_name tableName, ddl
+      FROM ${dataset}.INFORMATION_SCHEMA.TABLES;
+    `;
+    const result = await executeBigQuery(sql);
+    return result;
+  } catch (error) {
+    console.error(error);
+    throw error;
+  }
+}
+
+// Route to execute SQL against BigQuery
+app.post('/bigquery-query', async (req, res) => {
+  try {
+    const { sql } = req.body;
+    const records = await executeBigQuery(sql);
+    res.json({ records });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'An error occurred' });
@@ -216,4 +242,3 @@ app.post('/bigquery-query', async (req, res) => {
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
-
