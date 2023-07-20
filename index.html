@@ -107,6 +107,10 @@
                             <input id="temperature-qna" type="number" class="form-control" v-model="temperatureQnA"
                                 placeholder="Enter Temperature" min="0" max="2" step="0.2">
                         </div>
+                        <div class="col-md-5 form-check">
+                          <input type="checkbox" class="form-check-input" v-model="full">
+                          <label class="form-check-label">Full</label>
+                      </div>
                     </div>
 
                     <div class="form-group m-2">
@@ -135,7 +139,8 @@
                     selectedModel: 'gpt-3.5-turbo',
                     queryText: '',
                     response: '',
-                    additionalInfo: 'prompt'
+                    additionalInfo: 'prompt',
+                    full: false
                 };
             },
             methods: {
@@ -146,7 +151,7 @@
                             headers: {
                                 'Content-Type': 'application/json'
                             },
-                            body: JSON.stringify({ text: this.queryText, temperature: this.temperatureQnA })
+                            body: JSON.stringify({ text: this.queryText, temperature: this.temperatureQnA, full: this.full })
                         });
 
                         const data = await response.json();
